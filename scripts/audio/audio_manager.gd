@@ -1,10 +1,10 @@
 extends Node
 
-var sfx_fire: AudioStream
-var sfx_explosion: AudioStream
-var sfx_shield_hit: AudioStream
-var sfx_hull_hit: AudioStream
-var sfx_upgrade: AudioStream
+var sfx_fire: AudioStreamWAV
+var sfx_explosion: AudioStreamWAV
+var sfx_shield_hit: AudioStreamWAV
+var sfx_hull_hit: AudioStreamWAV
+var sfx_upgrade: AudioStreamWAV
 
 var fire_player: AudioStreamPlayer
 var explosion_player: AudioStreamPlayer
@@ -43,29 +43,34 @@ func _create_player() -> AudioStreamPlayer:
 	player.volume_db = linear_to_db(master_volume * sfx_volume)
 	return player
 
-func _generate_fire_sound() -> AudioStream:
-	var sound: AudioStreamGenerator = AudioStreamGenerator.new()
-	sound.mix_rate = 22050.0
-	var playback: AudioStreamGeneratorPlayback = sound.get_playback()
-	
+func _generate_fire_sound() -> AudioStreamWAV:
+	var mix_rate: int = 22050
 	var duration: float = 0.1
-	var samples: int = int(sound.mix_rate * duration)
+	var samples: int = int(mix_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(samples * 2)
 	
 	for i in samples:
 		var t: float = float(i) / float(samples)
 		var freq: float = lerp(800.0, 200.0, t)
 		var sample: float = sin(t * freq * TAU) * (1.0 - t) * 0.5
-		playback.push_frame(Vector2(sample, sample))
+		var sample_int: int = int(sample * 32767.0)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
 	
-	return sound
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.mix_rate = mix_rate
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.data = data
+	return stream
 
-func _generate_explosion_sound() -> AudioStream:
-	var sound: AudioStreamGenerator = AudioStreamGenerator.new()
-	sound.mix_rate = 22050.0
-	var playback: AudioStreamGeneratorPlayback = sound.get_playback()
-	
+func _generate_explosion_sound() -> AudioStreamWAV:
+	var mix_rate: int = 22050
 	var duration: float = 0.5
-	var samples: int = int(sound.mix_rate * duration)
+	var samples: int = int(mix_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(samples * 2)
 	
 	for i in samples:
 		var t: float = float(i) / float(samples)
@@ -73,58 +78,83 @@ func _generate_explosion_sound() -> AudioStream:
 		var envelope: float = (1.0 - t) * (1.0 - t)
 		var freq: float = lerp(100.0, 30.0, t)
 		var sample: float = (noise * 0.7 + sin(t * freq * TAU) * 0.3) * envelope * 0.8
-		playback.push_frame(Vector2(sample, sample))
+		var sample_int: int = int(sample * 32767.0)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
 	
-	return sound
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.mix_rate = mix_rate
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.data = data
+	return stream
 
-func _generate_shield_hit_sound() -> AudioStream:
-	var sound: AudioStreamGenerator = AudioStreamGenerator.new()
-	sound.mix_rate = 22050.0
-	var playback: AudioStreamGeneratorPlayback = sound.get_playback()
-	
+func _generate_shield_hit_sound() -> AudioStreamWAV:
+	var mix_rate: int = 22050
 	var duration: float = 0.15
-	var samples: int = int(sound.mix_rate * duration)
+	var samples: int = int(mix_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(samples * 2)
 	
 	for i in samples:
 		var t: float = float(i) / float(samples)
 		var freq: float = lerp(1200.0, 800.0, t)
 		var sample: float = sin(t * freq * TAU) * (1.0 - t * t) * 0.4
-		playback.push_frame(Vector2(sample, sample))
+		var sample_int: int = int(sample * 32767.0)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
 	
-	return sound
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.mix_rate = mix_rate
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.data = data
+	return stream
 
-func _generate_hull_hit_sound() -> AudioStream:
-	var sound: AudioStreamGenerator = AudioStreamGenerator.new()
-	sound.mix_rate = 22050.0
-	var playback: AudioStreamGeneratorPlayback = sound.get_playback()
-	
+func _generate_hull_hit_sound() -> AudioStreamWAV:
+	var mix_rate: int = 22050
 	var duration: float = 0.2
-	var samples: int = int(sound.mix_rate * duration)
+	var samples: int = int(mix_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(samples * 2)
 	
 	for i in samples:
 		var t: float = float(i) / float(samples)
 		var noise: float = randf_range(-1.0, 1.0)
 		var envelope: float = (1.0 - t)
 		var sample: float = noise * envelope * 0.6
-		playback.push_frame(Vector2(sample, sample))
+		var sample_int: int = int(sample * 32767.0)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
 	
-	return sound
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.mix_rate = mix_rate
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.data = data
+	return stream
 
-func _generate_upgrade_sound() -> AudioStream:
-	var sound: AudioStreamGenerator = AudioStreamGenerator.new()
-	sound.mix_rate = 22050.0
-	var playback: AudioStreamGeneratorPlayback = sound.get_playback()
-	
+func _generate_upgrade_sound() -> AudioStreamWAV:
+	var mix_rate: int = 22050
 	var duration: float = 0.3
-	var samples: int = int(sound.mix_rate * duration)
+	var samples: int = int(mix_rate * duration)
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(samples * 2)
 	
 	for i in samples:
 		var t: float = float(i) / float(samples)
 		var freq: float = lerp(400.0, 800.0, t)
 		var sample: float = sin(t * freq * TAU) * (1.0 - abs(t - 0.5) * 2.0) * 0.5
-		playback.push_frame(Vector2(sample, sample))
+		var sample_int: int = int(sample * 32767.0)
+		data[i * 2] = sample_int & 0xFF
+		data[i * 2 + 1] = (sample_int >> 8) & 0xFF
 	
-	return sound
+	var stream: AudioStreamWAV = AudioStreamWAV.new()
+	stream.mix_rate = mix_rate
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.stereo = false
+	stream.data = data
+	return stream
 
 func play_fire() -> void:
 	fire_player.stream = sfx_fire
