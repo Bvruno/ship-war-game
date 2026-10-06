@@ -71,3 +71,4 @@ environment/defaults/default_clear_color=Color(0.1, 0.2, 0.35, 1)
 
 GameData="*res://scripts/data/game_data.gd"
 MultiplayerManager="*res://scripts/network/multiplayer_manager.gd"
+AudioManager="*res://scripts/audio/audio_manager.gd"

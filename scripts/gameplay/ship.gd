@@ -47,6 +47,7 @@ var projectile_scene: PackedScene
 @onready var sail_sprite: Sprite2D = $Sail
 @onready var fire_particles: GPUParticles2D = $FireParticles
 @onready var invincible_flash: Timer = $InvincibleFlash
+@onready var water_trail: Node2D = $WaterTrail
 
 var _is_local: bool = false
 var _damage_flash_timer: float = 0.0
@@ -62,6 +63,8 @@ func _ready() -> void:
 		_is_local = true
 	if sync:
 		sync.set_multiplayer_authority(player_id)
+	if water_trail:
+		water_trail.follow_node = self
 
 func is_local_player() -> bool:
 	if is_bot:
@@ -143,6 +146,8 @@ func try_fire() -> bool:
 	_fire_projectiles()
 	rpc("fire_sync", aim_direction, fire_cooldown, weapon_level, ship_level, radar_level)
 	fire_cooldown_timer = fire_cooldown
+	if AudioManager:
+		AudioManager.play_fire()
 	return true
 
 @rpc("any_peer", "call_local", "reliable")
@@ -197,10 +202,14 @@ func take_damage(amount: float, attacker_id: int) -> void:
 		remaining -= absorbed
 		if is_local_player():
 			shield_changed.emit(current_shield, max_shield)
+			if AudioManager:
+				AudioManager.play_shield_hit()
 	if remaining > 0.0:
 		current_hp -= remaining
 		if is_local_player():
 			hp_changed.emit(current_hp, max_hp)
+			if AudioManager:
+				AudioManager.play_hull_hit()
 	visual_state_changed.emit()
 	if current_hp <= 0.0:
 		_die(attacker_id)
@@ -231,6 +240,8 @@ func upgrade_ship() -> void:
 	_recalculate_stats()
 	current_hp = minf(current_hp, max_hp)
 	rpc("sync_upgrade", ship_level, weapon_level, shield_level, radar_level)
+	if is_local_player() and AudioManager:
+		AudioManager.play_upgrade()
 
 func upgrade_weapon() -> void:
 	if upgrade_points <= 0 or weapon_level >= 5:
@@ -239,6 +250,8 @@ func upgrade_weapon() -> void:
 	upgrade_points -= 1
 	_recalculate_stats()
 	rpc("sync_upgrade", ship_level, weapon_level, shield_level, radar_level)
+	if is_local_player() and AudioManager:
+		AudioManager.play_upgrade()
 
 func upgrade_shield() -> void:
 	if upgrade_points <= 0 or shield_level >= 5:
@@ -248,6 +261,8 @@ func upgrade_shield() -> void:
 	_recalculate_stats()
 	current_shield = minf(current_shield, max_shield)
 	rpc("sync_upgrade", ship_level, weapon_level, shield_level, radar_level)
+	if is_local_player() and AudioManager:
+		AudioManager.play_upgrade()
 
 func upgrade_radar() -> void:
 	if upgrade_points <= 0 or radar_level >= 5:
@@ -256,6 +271,8 @@ func upgrade_radar() -> void:
 	upgrade_points -= 1
 	_recalculate_stats()
 	rpc("sync_upgrade", ship_level, weapon_level, shield_level, radar_level)
+	if is_local_player() and AudioManager:
+		AudioManager.play_upgrade()
 
 @rpc("any_peer", "call_local", "reliable")
 func sync_upgrade(s_lv: int, w_lv: int, sh_lv: int, r_lv: int) -> void:
@@ -284,6 +301,8 @@ func reset_to_level_1() -> void:
 
 func _die(killer_id: int) -> void:
 	_spawn_explosion()
+	if is_local_player() and AudioManager:
+		AudioManager.play_explosion()
 	ship_died.emit(player_id)
 	queue_free()
 

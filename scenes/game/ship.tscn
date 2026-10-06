@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://ship002"]
+[gd_scene load_steps=5 format=3 uid="uid://ship002"]
 
 [ext_resource type="Script" path="res://scripts/gameplay/ship.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/effects/water_trail.gd" id="2"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
 size = Vector2(40, 20)
@@ -34,6 +35,9 @@ offset_bottom = 0.0
 emitting = false
 amount = 20
 lifetime = 0.5
+
+[node name="WaterTrail" type="Node2D" parent="."]
+script = ExtResource("2")
 
 [node name="NicknameLabel" type="Label" parent="."]
 offset_left = -30.0
