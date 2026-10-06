@@ -7,11 +7,11 @@ var world: Node2D
 @onready var weapon_btn: Button = $Panel/VBox/WeaponBtn
 @onready var shield_btn: Button = $Panel/VBox/ShieldBtn
 @onready var radar_btn: Button = $Panel/VBox/RadarBtn
-@onready var points_label: Label = $Panel/VBox/PointsLabel
 @onready var ship_level_label: Label = $Panel/VBox/ShipLevel
 @onready var weapon_level_label: Label = $Panel/VBox/WeaponLevel
 @onready var shield_level_label: Label = $Panel/VBox/ShieldLevel
 @onready var radar_level_label: Label = $Panel/VBox/RadarLevel
+@onready var title_label: Label = $Panel/VBox/Title
 
 func setup(world_ref: Node2D) -> void:
 	world = world_ref
@@ -37,16 +37,14 @@ func hide_menu() -> void:
 		panel.visible = false
 
 func update_display(points: int) -> void:
-	if points_label:
-		points_label.text = "Upgrade Points: " + str(points)
 	var ship: Ship = world.get_local_ship() if world else null
 	if ship:
 		if ship_level_label:
-			ship_level_label.text = "Ship: " + str(ship.ship_level)
+			ship_level_label.text = "Barco: " + str(ship.ship_level)
 		if weapon_level_label:
-			weapon_level_label.text = "Weapon: " + str(ship.weapon_level)
+			weapon_level_label.text = "Arma: " + str(ship.weapon_level)
 		if shield_level_label:
-			shield_level_label.text = "Shield: " + str(ship.shield_level)
+			shield_level_label.text = "Escudo: " + str(ship.shield_level)
 		if radar_level_label:
 			radar_level_label.text = "Radar: " + str(ship.radar_level)
 		if ship_btn:
@@ -61,11 +59,7 @@ func update_display(points: int) -> void:
 func _on_upgrade(type: String) -> void:
 	if world:
 		world.request_upgrade.rpc_id(1, type)
-	var ship: Ship = world.get_local_ship() if world else null
-	if ship and ship.upgrade_points > 0:
-		update_display(ship.upgrade_points)
-	else:
-		hide_menu()
+	hide_menu()
 
 func _input(event: InputEvent) -> void:
 	if panel and panel.visible:

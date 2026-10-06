@@ -14,9 +14,21 @@ var decision_interval: float = 0.5
 
 var world_bounds: Rect2 = Rect2(0, 0, 1280, 720)
 
+var aggression_level: float = 1.0
+var preferred_distance: float = 200.0
+var strafe_preference: float = 0.5
+
 func _ready() -> void:
 	ship = get_parent() as Ship
+	_randomize_behavior()
 	_pick_new_patrol_point()
+
+func _randomize_behavior() -> void:
+	aggression_level = randf_range(0.7, 1.3)
+	preferred_distance = randf_range(150.0, 300.0)
+	strafe_preference = randf_range(0.3, 0.7)
+	decision_interval = randf_range(0.4, 0.7)
+	flee_threshold = randf_range(0.2, 0.4)
 
 func _physics_process(delta: float) -> void:
 	if not ship:
@@ -76,12 +88,18 @@ func _find_nearest_enemy() -> Ship:
 
 func _patrol_behavior(_delta: float) -> void:
 	var direction: Vector2 = (patrol_target - ship.global_position).normalized()
-	ship.set_move_input(direction)
+	ship.set_move_input(direction * 0.6)
 	
 	if ship.global_position.distance_to(patrol_target) < 50.0:
 		_pick_new_patrol_point()
 	
-	if randf() < 0.01:
+	if ship.global_position.x < world_bounds.position.x + 50 or \
+	   ship.global_position.x > world_bounds.end.x - 50 or \
+	   ship.global_position.y < world_bounds.position.y + 50 or \
+	   ship.global_position.y > world_bounds.end.y - 50:
+		patrol_target = world_bounds.get_center()
+	
+	if randf() < 0.005 * aggression_level:
 		ship.try_fire()
 
 func _chase_behavior(_delta: float) -> void:
@@ -90,7 +108,7 @@ func _chase_behavior(_delta: float) -> void:
 		return
 	
 	var direction: Vector2 = (target.global_position - ship.global_position).normalized()
-	ship.set_move_input(direction)
+	ship.set_move_input(direction * 0.8)
 	ship.set_aim_direction(direction)
 
 func _attack_behavior(_delta: float) -> void:
@@ -101,9 +119,20 @@ func _attack_behavior(_delta: float) -> void:
 	var direction: Vector2 = (target.global_position - ship.global_position).normalized()
 	ship.set_aim_direction(direction)
 	
-	var perpendicular: Vector2 = direction.rotated(PI / 2.0)
-	var strafe: Vector2 = perpendicular * (1.0 if randf() > 0.5 else -1.0)
-	ship.set_move_input(strafe * 0.5)
+	var distance: float = ship.global_position.distance_to(target.global_position)
+	var move_dir: Vector2 = Vector2.ZERO
+	
+	if distance < preferred_distance - 30:
+		move_dir = -direction
+	elif distance > preferred_distance + 30:
+		move_dir = direction
+	else:
+		var perpendicular: Vector2 = direction.rotated(PI / 2.0)
+		var strafe_dir: float = 1.0 if randf() > 0.5 else -1.0
+		if randf() < strafe_preference:
+			move_dir = perpendicular * strafe_dir
+	
+	ship.set_move_input(move_dir * 0.7)
 	
 	ship.try_fire()
 
@@ -133,3 +162,39 @@ func set_difficulty(avg_level: int) -> void:
 	
 	detection_range = 300.0 + (ship.radar_level - 1) * 50.0
 	attack_range = 200.0 + (ship.weapon_level - 1) * 30.0
+	world_bounds = Rect2(0, 0, 2500, 2500)
+	_randomize_behavior()
+
+func _process(_delta: float) -> void:
+	# Bot auto-upgrades
+	if ship.upgrade_points > 0:
+		_try_upgrade()
+
+func _try_upgrade() -> void:
+	# Prioriza upgrades basándose en estrategia
+	var upgrades: Array[String] = []
+	if ship.ship_level < 5:
+		upgrades.append("ship")
+	if ship.weapon_level < 5:
+		upgrades.append("weapon")
+	if ship.shield_level < 5:
+		upgrades.append("shield")
+	if ship.radar_level < 5:
+		upgrades.append("radar")
+	
+	if upgrades.is_empty():
+		return
+	
+	# Elige un upgrade aleatorio
+	var choice: String = upgrades[randi() % upgrades.size()]
+	
+	# Ejecuta el upgrade
+	match choice:
+		"ship":
+			ship.upgrade_ship()
+		"weapon":
+			ship.upgrade_weapon()
+		"shield":
+			ship.upgrade_shield()
+		"radar":
+			ship.upgrade_radar()

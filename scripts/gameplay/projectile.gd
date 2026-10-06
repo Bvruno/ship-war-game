@@ -10,7 +10,6 @@ var source_ship: Ship
 var start_position: Vector2
 var speed: float = 400.0
 var has_hit: bool = false
-var _is_local: bool = true
 
 func _ready() -> void:
 	start_position = global_position
@@ -33,18 +32,17 @@ func _on_body_entered(body: Node2D) -> void:
 			return
 		if target_ship.is_invincible:
 			return
-		if _is_local:
-			var distance: float = global_position.distance_to(target_ship.global_position)
-			var multiplier: float = GameData.get_damage_multiplier(
-				target_ship.current_hp, target_ship.max_hp, distance
-			)
-			var final_damage: float = damage * multiplier
-			if target_ship.is_local_player():
-				target_ship.take_damage(final_damage, owner_id)
-			else:
-				target_ship.take_damage_sync.rpc_id(target_ship.player_id, final_damage, owner_id)
-			if source_ship and source_ship.is_local_player():
-				source_ship.add_damage_dealt(final_damage)
+		var distance: float = global_position.distance_to(target_ship.global_position)
+		var multiplier: float = GameData.get_damage_multiplier(
+			target_ship.current_hp, target_ship.max_hp, distance
+		)
+		var final_damage: float = damage * multiplier
+		if target_ship.is_local_player():
+			target_ship.take_damage(final_damage, owner_id)
+		else:
+			target_ship.take_damage_sync.rpc_id(target_ship.player_id, final_damage, owner_id)
+		if source_ship and source_ship.is_local_player():
+			source_ship.add_damage_dealt(final_damage)
 		has_hit = true
 		queue_free()
 	elif body.is_in_group("islands"):

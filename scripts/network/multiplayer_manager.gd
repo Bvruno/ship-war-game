@@ -13,12 +13,26 @@ signal player_joined(peer_id: int, nickname: String)
 signal player_left(peer_id: int)
 signal connection_failed()
 signal connected_to_server()
+signal server_disconnected()
 
 func _ready() -> void:
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
+	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+func _on_server_disconnected() -> void:
+	if not is_host:
+		server_disconnected.emit()
+		reset_state()
+
+func reset_state() -> void:
+	players_data.clear()
+	is_host = false
+	local_peer_id = 1
+	if multiplayer.multiplayer_peer:
+		multiplayer.multiplayer_peer = null
 
 func start_host(nickname: String) -> void:
 	is_host = true

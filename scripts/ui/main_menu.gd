@@ -44,6 +44,8 @@ func _on_join_game() -> void:
 		status_label.text = "Enter host IP!"
 		return
 	_save_nickname(nickname)
+	MultiplayerManager.connected_to_server.connect(_on_connected)
+	MultiplayerManager.connection_failed.connect(_on_connection_failed)
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	var err: Error = peer.create_client(ip, MultiplayerManager.PORT)
 	if err != OK:
@@ -52,8 +54,6 @@ func _on_join_game() -> void:
 	multiplayer.multiplayer_peer = peer
 	MultiplayerManager.start_client(nickname)
 	status_label.text = "Connecting..."
-	MultiplayerManager.connected_to_server.connect(_on_connected)
-	MultiplayerManager.connection_failed.connect(_on_connection_failed)
 
 func _on_connected() -> void:
 	status_label.text = "Connected!"

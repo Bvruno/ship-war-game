@@ -1,6 +1,7 @@
 extends Node2D
 
 signal game_over(winner_id: int)
+signal time_updated(player_id: int, time: float)
 
 var world: Node2D
 var control_timers: Dictionary = {}
@@ -15,17 +16,32 @@ func _ready() -> void:
 		tower.body_exited.connect(_on_body_exited)
 
 func _physics_process(delta: float) -> void:
+	if not multiplayer.is_server():
+		return
+	var changed: bool = false
 	for id in controlling_players.keys():
 		if world and world.players.has(id):
 			control_timers[id] = control_timers.get(id, 0.0) + delta
+			changed = true
 			if control_timers[id] >= max_time:
 				game_over.emit(id)
 				return
+	if changed:
+		for id in controlling_players.keys():
+			time_updated.emit(id, control_timers.get(id, 0.0))
+
+@rpc("any_peer", "reliable", "call_local")
+func sync_timers(timers: Dictionary) -> void:
+	if multiplayer.is_server():
+		return
+	control_timers = timers
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Ship:
 		var ship: Ship = body as Ship
 		controlling_players[ship.player_id] = true
+		if not control_timers.has(ship.player_id):
+			control_timers[ship.player_id] = 0.0
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Ship:

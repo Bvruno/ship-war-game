@@ -39,6 +39,9 @@ func _ready() -> void:
 		var um_script = preload("res://scripts/ui/upgrade_menu.gd")
 		upgrade_menu.set_script(um_script)
 		upgrade_menu.setup(self)
+	var options_menu: Node = get_node_or_null("OptionsMenu")
+	if options_menu and options_menu.has_signal("game_cancel_requested"):
+		options_menu.game_cancel_requested.connect(_on_game_cancel)
 	_connect_upgrade_buttons()
 	if game_mode == GameData.GameMode.TOWER_DEFENSE:
 		_activate_tower_mode()
@@ -80,6 +83,8 @@ func _on_upgrade(type: String) -> void:
 		upgrade_menu.hide_menu()
 
 func _on_close_upgrade() -> void:
+	if hud:
+		hud.close_upgrade_menu()
 	if upgrade_menu:
 		upgrade_menu.hide_menu()
 
@@ -107,9 +112,13 @@ func spawn_ship_for(peer_id: int, nick: String, pos: Vector2) -> void:
 	_spawn_ship(peer_id, nick, pos)
 
 func _spawn_ship(id: int, nick: String, pos: Vector2) -> void:
+	if players.has(id):
+		return
 	var ship: Ship = SHIP_SCENE.instantiate() as Ship
 	ship.player_id = id
 	ship.nickname = nick
+	pos.x = clampf(pos.x, 50.0, 2450.0)
+	pos.y = clampf(pos.y, 50.0, 2450.0)
 	ship.global_position = pos
 	ship.name = "Ship_" + str(id)
 	add_child(ship)
@@ -136,9 +145,17 @@ func _on_ship_shield_changed(current_shield: float, max_shield: float, id: int) 
 	if id == multiplayer.get_unique_id() and hud:
 		hud.update_shield(current_shield, max_shield)
 
-func _on_ship_died(ship_id: int, _original_id: int) -> void:
+func _on_ship_died(ship_id: int, killer_id: int, _original_id: int) -> void:
 	dead_ships[ship_id] = Time.get_ticks_msec()
 	players.erase(ship_id)
+	# Remove from bots if it was a bot
+	if bots.has(ship_id):
+		bots.erase(ship_id)
+	# Register kill for combo
+	if players.has(killer_id):
+		var killer: Ship = players[killer_id] as Ship
+		if killer:
+			killer.register_kill()
 	if hud:
 		hud.update_player_count(players.size())
 	if multiplayer.is_server():
@@ -146,17 +163,21 @@ func _on_ship_died(ship_id: int, _original_id: int) -> void:
 
 func _on_upgrade_points(points: int, id: int) -> void:
 	if id == multiplayer.get_unique_id() and hud:
+		hud.reset_upgrade_closed()
 		hud.update_upgrade_points(points)
 
 func _schedule_respawn(ship_id: int) -> void:
 	await get_tree().create_timer(2.0).timeout
 	if players.has(ship_id):
 		return
-	if bots.has(ship_id):
+	# Bots have negative IDs, players have positive IDs
+	if ship_id < 0:
+		# Respawn as bot
 		var avg_level: int = _get_avg_player_level()
 		add_bot(avg_level)
 		dead_ships.erase(ship_id)
-	elif not bots.has(ship_id):
+	else:
+		# Respawn as player
 		rpc("respawn_player", ship_id)
 		_respawn_player_local(ship_id)
 
@@ -216,12 +237,16 @@ func sync_ship_state(peer_id: int, s_lv: int, w_lv: int, sh_lv: int, r_lv: int, 
 	if not players.has(peer_id):
 		return
 	var ship: Ship = players[peer_id] as Ship
+	var hp_ratio: float = ship.current_hp / maxf(ship.max_hp, 1.0)
+	var shield_ratio: float = ship.current_shield / maxf(ship.max_shield, 1.0)
 	ship.ship_level = s_lv
 	ship.weapon_level = w_lv
 	ship.shield_level = sh_lv
 	ship.radar_level = r_lv
 	ship.upgrade_points = pts
 	ship._recalculate_stats()
+	ship.current_hp = hp_ratio * ship.max_hp
+	ship.current_shield = shield_ratio * ship.max_shield
 	if peer_id == multiplayer.get_unique_id() and hud:
 		hud.update_hp(ship.current_hp, ship.max_hp)
 		hud.update_shield(ship.current_shield, ship.max_shield)
@@ -281,9 +306,16 @@ func _get_avg_player_level() -> int:
 		return 1
 	return clampi(int(float(total_level) / float(count * 4)), 1, 5)
 
+func _get_bot_count() -> int:
+	return bots.size()
+
 func _on_tower_game_over(winner_id: int) -> void:
 	if hud:
 		var winner_name: String = "Unknown"
 		if players.has(winner_id):
 			winner_name = (players[winner_id] as Ship).nickname
 		hud.show_game_over("Tower Winner: " + winner_name)
+
+func _on_game_cancel() -> void:
+	MultiplayerManager.reset_state()
+	get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")

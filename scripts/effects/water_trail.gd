@@ -24,11 +24,16 @@ func _process(delta: float) -> void:
 	_cleanup_particles()
 
 func _spawn_particle() -> void:
-	if not follow_node.velocity or follow_node.velocity.length() < 10.0:
+	if not follow_node or not is_instance_valid(follow_node):
+		return
+	if not follow_node is CharacterBody2D:
+		return
+	var vel: Vector2 = (follow_node as CharacterBody2D).velocity
+	if vel.length() < 10.0:
 		return
 	
 	var particle: Node2D = particle_scene.instantiate()
-	particle.global_position = follow_node.global_position - follow_node.velocity.normalized() * 20
+	particle.global_position = follow_node.global_position - vel.normalized() * 20
 	particle.global_position += Vector2(randf_range(-5, 5), randf_range(-5, 5))
 	
 	get_parent().add_child(particle)

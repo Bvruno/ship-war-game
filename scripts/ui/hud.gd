@@ -3,7 +3,9 @@ extends CanvasLayer
 var world: Node2D
 
 @onready var hp_bar: ProgressBar = $TopLeft/VBoxContainer/HPBar
+@onready var hp_label: Label = $TopLeft/VBoxContainer/HPLabel
 @onready var shield_bar: ProgressBar = $TopLeft/VBoxContainer/ShieldBar
+@onready var shield_label: Label = $TopLeft/VBoxContainer/ShieldLabel
 @onready var cooldown_bar: ProgressBar = $TopLeft/VBoxContainer/CooldownBar
 @onready var score_label: Label = $TopLeft/VBoxContainer/ScoreLabel
 @onready var player_count_label: Label = $TopLeft/VBoxContainer/PlayerCountLabel
@@ -16,9 +18,11 @@ var world: Node2D
 @onready var tower_timer_label: Label = $TowerUI/TowerPanel/VBox/TimerLabel
 @onready var tower_status_label: Label = $TowerUI/TowerPanel/VBox/StatusLabel
 @onready var game_over_panel: PanelContainer = $GameOverPanel
+@onready var options_btn: Button = $OptionsBtn
 
 var upgrade_menu_script = preload("res://scripts/ui/upgrade_menu.gd")
 var _upgrade_menu: Control
+var _upgrade_menu_closed: bool = false
 
 func setup(world_ref: Node2D) -> void:
 	world = world_ref
@@ -34,6 +38,8 @@ func _ready() -> void:
 		tower_panel.visible = false
 	if game_over_panel:
 		game_over_panel.visible = false
+	if options_btn:
+		options_btn.pressed.connect(_on_options_pressed)
 
 func _process(_delta: float) -> void:
 	if not world:
@@ -59,21 +65,12 @@ func _on_remove_bot() -> void:
 	var last_bot_id: int = world.bots.keys().back()
 	world.remove_bot(last_bot_id)
 
-func _process(_delta: float) -> void:
-	if not world:
-		return
-	var ship: Ship = world.get_local_ship()
-	if ship:
-		if cooldown_bar:
-			cooldown_bar.value = 1.0 - ship.get_cooldown_ratio()
-		_update_minimap(ship)
-
 func _update_minimap(local_ship: Ship) -> void:
 	if not minimap:
 		return
 	for child in minimap.get_children():
 		child.queue_free()
-	var world_rect: Rect2 = Rect2(0, 0, 1280, 720)
+	var world_rect: Rect2 = Rect2(0, 0, 2500, 2500)
 	var map_size: Vector2 = minimap.size
 	for id in world.players:
 		var ship: Ship = world.players[id] as Ship
@@ -97,26 +94,45 @@ func update_hp(current: float, max_val: float) -> void:
 	if hp_bar:
 		hp_bar.max_value = max_val
 		hp_bar.value = current
+		hp_bar.modulate = Color(0.8, 0.2, 0.2, 1)  # Rojo
+	if hp_label:
+		hp_label.text = "HP: %d/%d" % [int(current), int(max_val)]
 
 func update_shield(current: float, max_val: float) -> void:
 	if shield_bar:
 		shield_bar.max_value = max_val
 		shield_bar.value = current
+		shield_bar.modulate = Color(0.2, 0.5, 0.8, 1)  # Azul
+	if shield_label:
+		shield_label.text = "Escudo: %d/%d" % [int(current), int(max_val)]
 
 func update_score(score: int) -> void:
 	if score_label:
-		score_label.text = "Score: " + str(score)
+		score_label.text = "Puntos: " + str(score)
 
 func update_player_count(count: int) -> void:
 	if player_count_label:
-		player_count_label.text = "Players: " + str(count)
+		player_count_label.text = "Jugadores: " + str(count)
 
 func update_upgrade_points(points: int) -> void:
 	if points_label:
-		points_label.text = "Upgrades: " + str(points)
-	if points > 0 and upgrade_panel:
-		upgrade_panel.visible = true
+		points_label.text = "Mejoras: " + str(points)
+	if points <= 0:
+		_upgrade_menu_closed = false
+		if upgrade_panel:
+			upgrade_panel.visible = false
+	elif not _upgrade_menu_closed:
+		if upgrade_panel:
+			upgrade_panel.visible = true
 		_update_upgrade_buttons()
+
+func close_upgrade_menu() -> void:
+	_upgrade_menu_closed = true
+	if upgrade_panel:
+		upgrade_panel.visible = false
+
+func reset_upgrade_closed() -> void:
+	_upgrade_menu_closed = false
 
 func _update_upgrade_buttons() -> void:
 	var ship: Ship = world.get_local_ship() if world else null
@@ -176,9 +192,9 @@ func _update_tower_ui() -> void:
 	var my_time: float = world.tower_mode_node.get_control_time(my_id)
 	var controlling: bool = world.tower_mode_node.is_controlling(my_id)
 	if tower_timer_label:
-		tower_timer_label.text = "Time: " + str(snapped(my_time, 0.1)) + "s / 60s"
+		tower_timer_label.text = "Tiempo: " + str(snapped(my_time, 0.1)) + "s / 60s"
 	if tower_status_label:
-		tower_status_label.text = "Controlling: YES" if controlling else "Controlling: NO"
+		tower_status_label.text = "Control: SI" if controlling else "Control: NO"
 
 func show_game_over(message: String) -> void:
 	if game_over_panel:
@@ -186,3 +202,9 @@ func show_game_over(message: String) -> void:
 		var label: Label = game_over_panel.get_node_or_null("Label")
 		if label:
 			label.text = message
+
+func _on_options_pressed() -> void:
+	if world:
+		var options_menu: Node = world.get_node_or_null("OptionsMenu")
+		if options_menu:
+			options_menu.show_menu()
