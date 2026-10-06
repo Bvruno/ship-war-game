@@ -6,6 +6,8 @@ var is_host: bool = false
 var local_nickname: String = ""
 var local_peer_id: int = 1
 var players_data: Dictionary = {}
+var selected_map: int = 0
+var selected_mode: int = 0
 
 signal player_joined(peer_id: int, nickname: String)
 signal player_left(peer_id: int)

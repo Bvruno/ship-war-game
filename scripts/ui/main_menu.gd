@@ -1,6 +1,8 @@
 extends Control
 
 @onready var nickname_input: LineEdit = $VBoxContainer/NicknameInput
+@onready var map_select: OptionButton = $VBoxContainer/MapSelect
+@onready var mode_select: OptionButton = $VBoxContainer/ModeSelect
 @onready var create_game_btn: Button = $VBoxContainer/CreateGameBtn
 @onready var join_game_btn: Button = $VBoxContainer/JoinGameBtn
 @onready var ip_input: LineEdit = $VBoxContainer/IPInput
@@ -19,6 +21,8 @@ func _on_create_game() -> void:
 		status_label.text = "Enter a nickname!"
 		return
 	_save_nickname(nickname)
+	MultiplayerManager.selected_map = map_select.selected
+	MultiplayerManager.selected_mode = mode_select.selected
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	var err: Error = peer.create_server(MultiplayerManager.PORT, GameData.MAX_PLAYERS)
 	if err != OK:

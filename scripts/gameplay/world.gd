@@ -8,10 +8,11 @@ const BOT_SCENE: PackedScene = preload("res://scenes/bots/bot_ship.tscn")
 var players: Dictionary = {}
 var bots: Dictionary = {}
 var local_player_id: int = -1
-var game_mode: GameData.GameMode = GameData.GameMode.FREE_FOR_ALL
-var map_id: GameData.MapId = GameData.MapId.OPEN_SEA
+var game_mode: int = GameData.GameMode.FREE_FOR_ALL
+var map_id: int = GameData.MapId.OPEN_SEA
 var dead_ships: Dictionary = {}
 var next_bot_id: int = -1
+var tower_mode_node: Node = null
 
 @onready var hud: CanvasLayer = $HUD
 @onready var touch_controls: CanvasLayer = $TouchControls
@@ -26,6 +27,8 @@ var next_bot_id: int = -1
 ]
 
 func _ready() -> void:
+	game_mode = MultiplayerManager.selected_mode
+	map_id = MultiplayerManager.selected_map
 	if hud:
 		hud.setup(self)
 	if touch_controls:
@@ -37,10 +40,21 @@ func _ready() -> void:
 		upgrade_menu.set_script(um_script)
 		upgrade_menu.setup(self)
 	_connect_upgrade_buttons()
+	if game_mode == GameData.GameMode.TOWER_DEFENSE:
+		_activate_tower_mode()
 	if multiplayer.is_server():
 		_create_local_player_as_host()
 	else:
 		_request_spawn()
+
+func _activate_tower_mode() -> void:
+	var tower_mode_scene: PackedScene = preload("res://scenes/game/tower_mode.tscn")
+	tower_mode_node = tower_mode_scene.instantiate()
+	tower_mode_node.world = self
+	add_child(tower_mode_node)
+	tower_mode_node.game_over.connect(_on_tower_game_over)
+	if hud:
+		hud.show_tower_ui(true)
 
 func _connect_upgrade_buttons() -> void:
 	if upgrade_menu:
@@ -266,3 +280,10 @@ func _get_avg_player_level() -> int:
 	if count == 0:
 		return 1
 	return clampi(int(float(total_level) / float(count * 4)), 1, 5)
+
+func _on_tower_game_over(winner_id: int) -> void:
+	if hud:
+		var winner_name: String = "Unknown"
+		if players.has(winner_id):
+			winner_name = (players[winner_id] as Ship).nickname
+		hud.show_game_over("Tower Winner: " + winner_name)

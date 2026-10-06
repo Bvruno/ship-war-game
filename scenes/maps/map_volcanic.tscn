@@ -1,0 +1,100 @@
+[gd_scene load_steps=2 format=3 uid="uid://map_volcanic"]
+
+[ext_resource type="Script" path="res://scripts/gameplay/world.gd" id="1"]
+
+[node name="VolcanicMap" type="Node2D"]
+script = ExtResource("1")
+
+[node name="WaterBackground" type="ColorRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.12, 0.15, 0.25, 1)
+
+[node name="Volcano1" type="StaticBody2D" parent="."]
+position = Vector2(300, 250)
+collision_layer = 4
+
+[node name="Sprite" type="Sprite2D" parent="Volcano1"]
+modulate = Color(0.3, 0.15, 0.1, 1)
+scale = Vector2(80, 60)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Volcano1"]
+
+[node name="Lava1" type="Sprite2D" parent="Volcano1"]
+modulate = Color(1.0, 0.3, 0.0, 0.5)
+offset_left = -20.0
+offset_top = -15.0
+offset_right = 20.0
+offset_bottom = 15.0
+
+[node name="Volcano2" type="StaticBody2D" parent="."]
+position = Vector2(980, 250)
+collision_layer = 4
+
+[node name="Sprite" type="Sprite2D" parent="Volcano2"]
+modulate = Color(0.3, 0.15, 0.1, 1)
+scale = Vector2(70, 55)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Volcano2"]
+
+[node name="Lava2" type="Sprite2D" parent="Volcano2"]
+modulate = Color(1.0, 0.3, 0.0, 0.5)
+offset_left = -15.0
+offset_top = -12.0
+offset_right = 15.0
+offset_bottom = 12.0
+
+[node name="Volcano3" type="StaticBody2D" parent="."]
+position = Vector2(640, 500)
+collision_layer = 4
+
+[node name="Sprite" type="Sprite2D" parent="Volcano3"]
+modulate = Color(0.3, 0.15, 0.1, 1)
+scale = Vector2(90, 70)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Volcano3"]
+
+[node name="Lava3" type="Sprite2D" parent="Volcano3"]
+modulate = Color(1.0, 0.3, 0.0, 0.5)
+offset_left = -25.0
+offset_top = -18.0
+offset_right = 25.0
+offset_bottom = 18.0
+
+[node name="Rock1" type="StaticBody2D" parent="."]
+position = Vector2(150, 550)
+collision_layer = 4
+
+[node name="Sprite" type="Sprite2D" parent="Rock1"]
+modulate = Color(0.4, 0.3, 0.25, 1)
+scale = Vector2(40, 30)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rock1"]
+
+[node name="Rock2" type="StaticBody2D" parent="."]
+position = Vector2(1100, 550)
+collision_layer = 4
+
+[node name="Sprite" type="Sprite2D" parent="Rock2"]
+modulate = Color(0.4, 0.3, 0.25, 1)
+scale = Vector2(45, 35)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Rock2"]
+
+[node name="SpawnPoint1" type="Marker2D" parent="."]
+position = Vector2(150, 150)
+
+[node name="SpawnPoint2" type="Marker2D" parent="."]
+position = Vector2(1130, 150)
+
+[node name="SpawnPoint3" type="Marker2D" parent="."]
+position = Vector2(150, 600)
+
+[node name="SpawnPoint4" type="Marker2D" parent="."]
+position = Vector2(1130, 600)
+
+[node name="SpawnPoint5" type="Marker2D" parent="."]
+position = Vector2(480, 360)
+
+[node name="SpawnPoint6" type="Marker2D" parent="."]
+position = Vector2(800, 360)

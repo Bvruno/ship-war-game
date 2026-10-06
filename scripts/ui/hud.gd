@@ -12,6 +12,10 @@ var world: Node2D
 @onready var upgrade_panel: PanelContainer = $UpgradeMenu/Panel
 @onready var add_bot_btn: Button = $BotControls/AddBotBtn
 @onready var remove_bot_btn: Button = $BotControls/RemoveBotBtn
+@onready var tower_panel: PanelContainer = $TowerUI/TowerPanel
+@onready var tower_timer_label: Label = $TowerUI/TowerPanel/VBox/TimerLabel
+@onready var tower_status_label: Label = $TowerUI/TowerPanel/VBox/StatusLabel
+@onready var game_over_panel: PanelContainer = $GameOverPanel
 
 var upgrade_menu_script = preload("res://scripts/ui/upgrade_menu.gd")
 var _upgrade_menu: Control
@@ -26,6 +30,20 @@ func _ready() -> void:
 		add_bot_btn.pressed.connect(_on_add_bot)
 	if remove_bot_btn:
 		remove_bot_btn.pressed.connect(_on_remove_bot)
+	if tower_panel:
+		tower_panel.visible = false
+	if game_over_panel:
+		game_over_panel.visible = false
+
+func _process(_delta: float) -> void:
+	if not world:
+		return
+	var ship: Ship = world.get_local_ship()
+	if ship:
+		if cooldown_bar:
+			cooldown_bar.value = 1.0 - ship.get_cooldown_ratio()
+	_update_minimap(ship)
+	_update_tower_ui()
 
 func _on_add_bot() -> void:
 	if not world:
@@ -144,3 +162,27 @@ func _on_radar_upgrade_pressed() -> void:
 
 func _on_close_upgrade_pressed() -> void:
 	hide_upgrade_menu()
+
+func show_tower_ui(show: bool) -> void:
+	if tower_panel:
+		tower_panel.visible = show
+
+func _update_tower_ui() -> void:
+	if not world or not world.tower_mode_node:
+		return
+	if not tower_panel or not tower_panel.visible:
+		return
+	var my_id: int = multiplayer.get_unique_id()
+	var my_time: float = world.tower_mode_node.get_control_time(my_id)
+	var controlling: bool = world.tower_mode_node.is_controlling(my_id)
+	if tower_timer_label:
+		tower_timer_label.text = "Time: " + str(snapped(my_time, 0.1)) + "s / 60s"
+	if tower_status_label:
+		tower_status_label.text = "Controlling: YES" if controlling else "Controlling: NO"
+
+func show_game_over(message: String) -> void:
+	if game_over_panel:
+		game_over_panel.visible = true
+		var label: Label = game_over_panel.get_node_or_null("Label")
+		if label:
+			label.text = message
