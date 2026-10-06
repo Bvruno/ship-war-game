@@ -2,22 +2,52 @@ extends CanvasLayer
 
 var world: Node2D
 
-@onready var hp_bar: ProgressBar = $MarginContainer/VBoxContainer/HPBar
-@onready var shield_bar: ProgressBar = $MarginContainer/VBoxContainer/ShieldBar
-@onready var cooldown_bar: ProgressBar = $MarginContainer/VBoxContainer/CooldownBar
-@onready var score_label: Label = $MarginContainer/VBoxContainer/ScoreLabel
-@onready var player_count_label: Label = $MarginContainer/VBoxContainer/PlayerCountLabel
+@onready var hp_bar: ProgressBar = $TopLeft/VBoxContainer/HPBar
+@onready var shield_bar: ProgressBar = $TopLeft/VBoxContainer/ShieldBar
+@onready var cooldown_bar: ProgressBar = $TopLeft/VBoxContainer/CooldownBar
+@onready var score_label: Label = $TopLeft/VBoxContainer/ScoreLabel
+@onready var player_count_label: Label = $TopLeft/VBoxContainer/PlayerCountLabel
+@onready var points_label: Label = $TopLeft/VBoxContainer/PointsLabel
 @onready var minimap: Control = $MinimapPanel/Minimap
-@onready var upgrade_button: Button = $UpgradeButton
+@onready var upgrade_panel: PanelContainer = $UpgradeMenu/Panel
+
+var upgrade_menu_script = preload("res://scripts/ui/upgrade_menu.gd")
+var _upgrade_menu: Control
 
 func setup(world_ref: Node2D) -> void:
 	world = world_ref
 
+func _ready() -> void:
+	if upgrade_panel:
+		upgrade_panel.visible = false
+
 func _process(_delta: float) -> void:
-	if world:
-		var ship: Ship = world.get_local_ship()
-		if ship:
+	if not world:
+		return
+	var ship: Ship = world.get_local_ship()
+	if ship:
+		if cooldown_bar:
 			cooldown_bar.value = 1.0 - ship.get_cooldown_ratio()
+		_update_minimap(ship)
+
+func _update_minimap(local_ship: Ship) -> void:
+	if not minimap:
+		return
+	for child in minimap.get_children():
+		child.queue_free()
+	var world_rect: Rect2 = Rect2(0, 0, 1280, 720)
+	var map_size: Vector2 = minimap.size
+	for id in world.players:
+		var ship: Ship = world.players[id] as Ship
+		var map_pos: Vector2 = Vector2(
+			ship.global_position.x / world_rect.size.x * map_size.x,
+			ship.global_position.y / world_rect.size.y * map_size.y
+		)
+		var dot: ColorRect = ColorRect.new()
+		dot.color = Color.RED if id != multiplayer.get_unique_id() else Color.GREEN
+		dot.size = Vector2(6, 6)
+		dot.position = map_pos - Vector2(3, 3)
+		minimap.add_child(dot)
 
 func update_hp(current: float, max_val: float) -> void:
 	if hp_bar:
@@ -37,14 +67,54 @@ func update_player_count(count: int) -> void:
 	if player_count_label:
 		player_count_label.text = "Players: " + str(count)
 
+func update_upgrade_points(points: int) -> void:
+	if points_label:
+		points_label.text = "Upgrades: " + str(points)
+	if points > 0 and upgrade_panel:
+		upgrade_panel.visible = true
+		_update_upgrade_buttons()
+
+func _update_upgrade_buttons() -> void:
+	var ship: Ship = world.get_local_ship() if world else null
+	if not ship:
+		return
+	for btn_name in ["ShipBtn", "WeaponBtn", "ShieldBtn", "RadarBtn"]:
+		var btn: Button = upgrade_panel.get_node_or_null("VBox/" + btn_name)
+		if btn:
+			match btn_name:
+				"ShipBtn": btn.disabled = ship.ship_level >= 5
+				"WeaponBtn": btn.disabled = ship.weapon_level >= 5
+				"ShieldBtn": btn.disabled = ship.shield_level >= 5
+				"RadarBtn": btn.disabled = ship.radar_level >= 5
+
 func show_upgrade_menu(points: int) -> void:
-	if upgrade_button:
-		upgrade_button.visible = true
-		upgrade_button.text = "Upgrade (" + str(points) + ")"
+	if upgrade_panel:
+		upgrade_panel.visible = true
+	update_upgrade_points(points)
 
 func hide_upgrade_menu() -> void:
-	if upgrade_button:
-		upgrade_button.visible = false
+	if upgrade_panel:
+		upgrade_panel.visible = false
 
-func _on_upgrade_button_pressed() -> void:
+func _on_ship_upgrade_pressed() -> void:
+	if world:
+		world.request_upgrade.rpc_id(1, "ship")
+	hide_upgrade_menu()
+
+func _on_weapon_upgrade_pressed() -> void:
+	if world:
+		world.request_upgrade.rpc_id(1, "weapon")
+	hide_upgrade_menu()
+
+func _on_shield_upgrade_pressed() -> void:
+	if world:
+		world.request_upgrade.rpc_id(1, "shield")
+	hide_upgrade_menu()
+
+func _on_radar_upgrade_pressed() -> void:
+	if world:
+		world.request_upgrade.rpc_id(1, "radar")
+	hide_upgrade_menu()
+
+func _on_close_upgrade_pressed() -> void:
 	hide_upgrade_menu()

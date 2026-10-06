@@ -25,9 +25,9 @@ func _on_create_game() -> void:
 		status_label.text = "Failed to create server"
 		return
 	multiplayer.multiplayer_peer = peer
-	multiplayer.peer_connected.connect(_on_peer_connected)
-	status_label.text = "Waiting for players..."
 	MultiplayerManager.start_host(nickname)
+	status_label.text = "Hosting! IP: " + _get_local_ip()
+	await get_tree().create_timer(1.0).timeout
 	get_tree().change_scene_to_file("res://scenes/game/world.tscn")
 
 func _on_join_game() -> void:
@@ -48,7 +48,22 @@ func _on_join_game() -> void:
 	multiplayer.multiplayer_peer = peer
 	MultiplayerManager.start_client(nickname)
 	status_label.text = "Connecting..."
+	MultiplayerManager.connected_to_server.connect(_on_connected)
+	MultiplayerManager.connection_failed.connect(_on_connection_failed)
+
+func _on_connected() -> void:
+	status_label.text = "Connected!"
+	await get_tree().create_timer(0.5).timeout
 	get_tree().change_scene_to_file("res://scenes/game/world.tscn")
+
+func _on_connection_failed() -> void:
+	status_label.text = "Connection failed!"
+
+func _get_local_ip() -> String:
+	for address in IP.get_local_addresses():
+		if "." in address and not address.begins_with("127.") and address.count(".") == 3:
+			return address
+	return "Unknown"
 
 func _save_nickname(name: String) -> void:
 	var config: ConfigFile = ConfigFile.new()
