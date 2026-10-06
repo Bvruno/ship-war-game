@@ -56,11 +56,16 @@ func _ready() -> void:
 	_recalculate_stats()
 	current_hp = max_hp
 	current_shield = max_shield
+	add_to_group("ships")
 	_is_local = multiplayer.get_unique_id() == player_id or (player_id == 1 and multiplayer.is_server())
+	if is_bot:
+		_is_local = true
 	if sync:
 		sync.set_multiplayer_authority(player_id)
 
 func is_local_player() -> bool:
+	if is_bot:
+		return true
 	return multiplayer.get_unique_id() == player_id
 
 func _recalculate_stats() -> void:

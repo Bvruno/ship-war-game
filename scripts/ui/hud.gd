@@ -10,6 +10,8 @@ var world: Node2D
 @onready var points_label: Label = $TopLeft/VBoxContainer/PointsLabel
 @onready var minimap: Control = $MinimapPanel/Minimap
 @onready var upgrade_panel: PanelContainer = $UpgradeMenu/Panel
+@onready var add_bot_btn: Button = $BotControls/AddBotBtn
+@onready var remove_bot_btn: Button = $BotControls/RemoveBotBtn
 
 var upgrade_menu_script = preload("res://scripts/ui/upgrade_menu.gd")
 var _upgrade_menu: Control
@@ -20,6 +22,24 @@ func setup(world_ref: Node2D) -> void:
 func _ready() -> void:
 	if upgrade_panel:
 		upgrade_panel.visible = false
+	if add_bot_btn:
+		add_bot_btn.pressed.connect(_on_add_bot)
+	if remove_bot_btn:
+		remove_bot_btn.pressed.connect(_on_remove_bot)
+
+func _on_add_bot() -> void:
+	if not world:
+		return
+	var avg_level: int = world._get_avg_player_level()
+	world.add_bot(avg_level)
+
+func _on_remove_bot() -> void:
+	if not world:
+		return
+	if world.bots.is_empty():
+		return
+	var last_bot_id: int = world.bots.keys().back()
+	world.remove_bot(last_bot_id)
 
 func _process(_delta: float) -> void:
 	if not world:
@@ -44,7 +64,13 @@ func _update_minimap(local_ship: Ship) -> void:
 			ship.global_position.y / world_rect.size.y * map_size.y
 		)
 		var dot: ColorRect = ColorRect.new()
-		dot.color = Color.RED if id != multiplayer.get_unique_id() else Color.GREEN
+		var my_id: int = multiplayer.get_unique_id()
+		if id == my_id:
+			dot.color = Color.GREEN
+		elif ship.is_bot:
+			dot.color = Color.CORNFLOWER_BLUE
+		else:
+			dot.color = Color.RED
 		dot.size = Vector2(6, 6)
 		dot.position = map_pos - Vector2(3, 3)
 		minimap.add_child(dot)

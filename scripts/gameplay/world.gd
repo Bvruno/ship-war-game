@@ -3,12 +3,15 @@ extends Node2D
 signal game_over
 
 const SHIP_SCENE: PackedScene = preload("res://scenes/game/ship.tscn")
+const BOT_SCENE: PackedScene = preload("res://scenes/bots/bot_ship.tscn")
 
 var players: Dictionary = {}
+var bots: Dictionary = {}
 var local_player_id: int = -1
 var game_mode: GameData.GameMode = GameData.GameMode.FREE_FOR_ALL
 var map_id: GameData.MapId = GameData.MapId.OPEN_SEA
 var dead_ships: Dictionary = {}
+var next_bot_id: int = -1
 
 @onready var hud: CanvasLayer = $HUD
 @onready var touch_controls: CanvasLayer = $TouchControls
@@ -133,7 +136,13 @@ func _on_upgrade_points(points: int, id: int) -> void:
 
 func _schedule_respawn(ship_id: int) -> void:
 	await get_tree().create_timer(2.0).timeout
-	if not players.has(ship_id):
+	if players.has(ship_id):
+		return
+	if bots.has(ship_id):
+		var avg_level: int = _get_avg_player_level()
+		add_bot(avg_level)
+		dead_ships.erase(ship_id)
+	elif not bots.has(ship_id):
 		rpc("respawn_player", ship_id)
 		_respawn_player_local(ship_id)
 
@@ -203,3 +212,57 @@ func sync_ship_state(peer_id: int, s_lv: int, w_lv: int, sh_lv: int, r_lv: int, 
 		hud.update_hp(ship.current_hp, ship.max_hp)
 		hud.update_shield(ship.current_shield, ship.max_shield)
 		hud.update_upgrade_points(ship.upgrade_points)
+
+func add_bot(avg_level: int = 1) -> Ship:
+	var bot: Ship = BOT_SCENE.instantiate() as Ship
+	bot.is_bot = true
+	bot.player_id = next_bot_id
+	next_bot_id -= 1
+	bot.nickname = "Bot" + str(bots.size() + 1)
+	var spawn_idx: int = (players.size() + bots.size()) % spawn_points.size()
+	bot.global_position = spawn_points[spawn_idx]
+	bot.name = "BotShip_" + str(bot.player_id)
+	add_child(bot)
+	bots[bot.player_id] = bot
+	players[bot.player_id] = bot
+	_connect_ship_signals(bot)
+	var bot_ai: BotAI = bot.get_node("BotAI") as BotAI
+	if bot_ai:
+		bot_ai.set_difficulty(avg_level)
+	if hud:
+		hud.update_player_count(players.size())
+	return bot
+
+func add_bots(count: int, avg_level: int = 1) -> void:
+	for i in count:
+		if players.size() >= GameData.MAX_PLAYERS:
+			break
+		add_bot(avg_level)
+
+func remove_bot(bot_id: int) -> void:
+	if bots.has(bot_id):
+		var bot: Ship = bots[bot_id] as Ship
+		bot.queue_free()
+		bots.erase(bot_id)
+		players.erase(bot_id)
+		if hud:
+			hud.update_player_count(players.size())
+
+func remove_all_bots() -> void:
+	var bot_ids: Array = bots.keys()
+	for id in bot_ids:
+		remove_bot(id)
+
+func _get_avg_player_level() -> int:
+	if players.is_empty():
+		return 1
+	var total_level: int = 0
+	var count: int = 0
+	for id in players:
+		var ship: Ship = players[id] as Ship
+		if ship and not ship.is_bot:
+			total_level += ship.ship_level + ship.weapon_level + ship.shield_level + ship.radar_level
+			count += 1
+	if count == 0:
+		return 1
+	return clampi(int(float(total_level) / float(count * 4)), 1, 5)

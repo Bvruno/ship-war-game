@@ -166,6 +166,26 @@ text = "Upgrade Radar"
 layout_mode = 2
 text = "Close"
 
+[node name="BotControls" type="HBoxContainer" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -50.0
+offset_right = 250.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="AddBotBtn" type="Button" parent="HUD/BotControls"]
+layout_mode = 2
+custom_minimum_size = Vector2(110, 35)
+text = "+ Bot"
+
+[node name="RemoveBotBtn" type="Button" parent="HUD/BotControls"]
+layout_mode = 2
+custom_minimum_size = Vector2(110, 35)
+text = "- Bot"
+
 [node name="TouchControls" type="CanvasLayer" parent="."]
 layer = 1
 
